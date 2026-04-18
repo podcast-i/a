@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PodcastIA — Ton article devient un podcast en 24h</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060810;
+  --bg2:       #0b0f1a;
+  --bg3:       #0f1420;
+  --accent:    #7c9fff;
+  --accent2:   #a78bfa;
+  --gold:      #e8c87a;
+  --blanc:     #f0f2ff;
+  --gris:      #6b7280;
+  --gris2:     #374151;
+  --featured:  linear-gradient(135deg, #7c9fff 0%, #a78bfa 100%);
+}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--blanc);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+  cursor: none;
+}
+.cursor {
+  width: 8px; height: 8px;
+  background: var(--accent); border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+.cursor-ring {
+  width: 36px; height: 36px;
+  border: 1px solid rgba(124,159,255,0.4); border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: all 0.15s ease;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; opacity: 0.4;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1.4rem 4rem;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(to bottom, rgba(6,8,16,0.97) 0%, transparent 100%);
+  backdrop-filter: blur(12px);
+}
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.nav-links { display: flex; gap: 2.5rem; list-style: none; }
+.nav-links a {
+  font-size: 0.82rem; color: var(--gris);
+  text-decoration: none; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--blanc); }
+.nav-cta {
+  background: transparent; border: 1px solid rgba(124,159,255,0.4); color: var(--accent);
+  padding: 0.6rem 1.6rem; font-size: 0.78rem; font-weight: 500;
+  text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.nav-cta::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--featured); opacity: 0; transition: opacity 0.3s;
+}
+.nav-cta:hover { color: var(--blanc); border-color: transparent; }
+.nav-cta:hover::before { opacity: 1; }
+.nav-cta span { position: relative; z-index: 1; }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center; text-align: center;
+  padding: 8rem 2rem 5rem; position: relative; overflow: hidden;
+}
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px); pointer-events: none;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+.orb1 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(124,159,255,0.15), transparent 70%); top: -10%; left: 10%; }
+.orb2 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(167,139,250,0.12), transparent 70%); top: 20%; right: 5%; animation-delay: -3s; }
+.orb3 { width: 300px; height: 300px; background: radial-gradient(circle, rgba(232,200,122,0.08), transparent 70%); bottom: 10%; left: 30%; animation-delay: -5s; }
+@keyframes orbFloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-30px) scale(1.05); } }
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  background: rgba(124,159,255,0.08); border: 1px solid rgba(124,159,255,0.2);
+  padding: 0.5rem 1.2rem; margin-bottom: 2.5rem;
+  font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent);
+  opacity: 0; animation: fadeDown 0.8s 0.2s cubic-bezier(.16,1,.3,1) forwards;
+}
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
+
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3.5rem, 9vw, 7.5rem);
+  line-height: 1.0; font-weight: 700; max-width: 900px;
+  opacity: 0; animation: fadeUp 1s 0.4s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero h1 .line1 { display: block; color: var(--blanc); }
+.hero h1 .line2 {
+  display: block; font-style: italic;
+  background: linear-gradient(90deg, var(--accent), var(--accent2), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-size: 200%; animation: gradShift 4s linear infinite;
+}
+@keyframes gradShift { 0% { background-position: 0%; } 100% { background-position: 200%; } }
+
+.hero-sub {
+  margin-top: 2rem; max-width: 520px; font-size: 1.05rem; color: var(--gris); line-height: 1.8;
+  opacity: 0; animation: fadeUp 1s 0.6s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero-actions {
+  margin-top: 3rem; display: flex; align-items: center; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
+  opacity: 0; animation: fadeUp 1s 0.8s cubic-bezier(.16,1,.3,1) forwards;
+}
+.btn-primary {
+  position: relative; overflow: hidden; background: var(--featured); color: var(--blanc); border: none;
+  padding: 1.1rem 2.8rem; font-family: 'Outfit', sans-serif; font-size: 0.88rem; font-weight: 500;
+  text-decoration: none; letter-spacing: 0.1em; text-transform: uppercase;
+  transition: all 0.3s; display: inline-block; box-shadow: 0 0 40px rgba(124,159,255,0.3);
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 0 60px rgba(124,159,255,0.5); }
+.btn-secondary {
+  color: var(--gris); font-size: 0.85rem; text-decoration: none;
+  display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s;
+}
+.btn-secondary:hover { color: var(--blanc); }
+.btn-secondary::before { content: '▶'; font-size: 0.6rem; }
+.hero-trust {
+  margin-top: 1.5rem; font-size: 0.75rem; color: #3d4558; letter-spacing: 0.08em;
+  opacity: 0; animation: fadeUp 1s 1s cubic-bezier(.16,1,.3,1) forwards;
+}
+.hero-line {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 1px; height: 80px;
+  background: linear-gradient(to bottom, rgba(124,159,255,0.5), transparent);
+  opacity: 0; animation: fadeIn 1s 1.2s forwards;
+}
+
+/* STATS */
+.stats {
+  background: var(--bg2); border-top: 1px solid var(--gris2); border-bottom: 1px solid var(--gris2);
+  padding: 2.5rem 4rem; display: flex; justify-content: center; gap: 6rem; flex-wrap: wrap; z-index: 1; position: relative;
+}
+.stat { text-align: center; }
+.stat-num {
+  font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: block;
+}
+.stat-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gris); margin-top: 0.3rem; display: block; }
+
+/* SECTIONS */
+section {
+  padding: 7rem 4rem; position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.section-kicker {
+  font-size: 0.72rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1.2rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.8rem;
+}
+.section-kicker::before, .section-kicker::after {
+  content: ''; display: block; width: 30px; height: 1px; background: var(--accent); opacity: 0.4;
+}
+h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1.1; font-weight: 700; max-width: 720px;
+}
+h2 em { font-style: italic; color: var(--accent2); }
+.section-desc { margin-top: 1.2rem; font-size: 1rem; color: var(--gris); max-width: 520px; line-height: 1.8; }
+
+/* PROBLÈME */
+.problem { background: var(--bg); }
+.problem-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+  margin-top: 4rem; background: var(--gris2); max-width: 860px; width: 100%;
+}
+.problem-item {
+  background: var(--bg2); padding: 2.8rem; text-align: left;
+  transition: background 0.3s; position: relative; overflow: hidden;
+}
+.problem-item::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 0;
+  background: linear-gradient(to bottom, var(--accent), var(--accent2)); transition: height 0.4s ease;
+}
+.problem-item:hover::before { height: 100%; }
+.problem-item:hover { background: var(--bg3); }
+.problem-num {
+  font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; color: var(--gris2);
+  font-weight: 700; line-height: 1; margin-bottom: 1rem; transition: color 0.3s;
+}
+.problem-item:hover .problem-num { color: rgba(124,159,255,0.2); }
+.problem-text { font-size: 0.92rem; color: #6b7280; line-height: 1.7; }
+.problem-text strong { color: var(--blanc); font-weight: 400; }
+
+/* ÉTAPES */
+.how { background: var(--bg2); }
+.steps { margin-top: 4.5rem; display: flex; flex-direction: column; max-width: 680px; width: 100%; }
+.step {
+  display: flex; gap: 2.5rem; align-items: flex-start; padding: 2.5rem 0;
+  border-bottom: 1px solid var(--gris2); text-align: left; transition: all 0.3s;
+}
+.step:last-child { border-bottom: none; }
+.step-num {
+  font-family: 'Cormorant Garamond', serif; font-size: 5rem; font-weight: 700;
+  color: var(--gris2); line-height: 1; flex-shrink: 0; transition: all 0.4s;
+  background: linear-gradient(180deg, var(--gris2), transparent);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.step:hover .step-num {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.step-content { padding-top: 0.8rem; }
+.step-content h3 { font-size: 1.15rem; font-weight: 500; margin-bottom: 0.6rem; }
+.step-content p { font-size: 0.9rem; color: var(--gris); line-height: 1.7; }
+.step-badge {
+  display: inline-block; margin-top: 1rem;
+  border: 1px solid rgba(124,159,255,0.2); color: var(--accent); background: rgba(124,159,255,0.06);
+  padding: 0.3rem 0.9rem; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* OFFRE */
+.offer { background: var(--bg); }
+.offer-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  margin-top: 4.5rem; background: var(--gris2); max-width: 960px; width: 100%;
+}
+.offer-card {
+  background: var(--bg2); padding: 3rem 2.5rem; text-align: left;
+  transition: background 0.3s; display: flex; flex-direction: column; position: relative;
+}
+.offer-card:hover { background: var(--bg3); }
+.offer-card.featured { background: transparent; }
+.offer-card.featured::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(124,159,255,0.12), rgba(167,139,250,0.08));
+  border-left: 1px solid rgba(124,159,255,0.3); border-right: 1px solid rgba(124,159,255,0.3);
+  pointer-events: none;
+}
+.featured-badge {
+  position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  background: var(--featured); color: var(--blanc); font-size: 0.65rem;
+  padding: 0.3rem 1rem; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+}
+.offer-tag { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gris); margin-bottom: 2rem; display: block; }
+.offer-name { font-family: 'Cormorant Garamond', serif; font-size: 1.9rem; font-weight: 700; }
+.offer-price { font-family: 'Cormorant Garamond', serif; font-size: 3.8rem; font-weight: 700; color: var(--gold); line-height: 1; margin: 1.5rem 0 0.3rem; }
+.offer-price sup { font-size: 1.8rem; vertical-align: super; }
+.offer-period { font-size: 0.78rem; color: var(--gris); margin-bottom: 1.5rem; }
+.offer-desc { font-size: 0.85rem; color: var(--gris); line-height: 1.7; margin-bottom: 2rem; flex: 1; }
+.offer-features { list-style: none; margin-bottom: 2.5rem; }
+.offer-features li {
+  font-size: 0.85rem; color: #9ca3af; padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(55,65,81,0.5); display: flex; align-items: flex-start; gap: 0.8rem;
+}
+.offer-features li:last-child { border-bottom: none; }
+.offer-features li::before { content: '✦'; color: var(--accent); font-size: 0.6rem; flex-shrink: 0; margin-top: 0.2rem; }
+.offer-btn {
+  display: block; text-align: center; padding: 0.9rem; font-size: 0.78rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; transition: all 0.3s;
+  border: 1px solid var(--gris2); color: var(--gris); position: relative; z-index: 1;
+}
+.offer-btn:hover { border-color: var(--accent); color: var(--accent); }
+.offer-card.featured .offer-btn {
+  background: var(--featured); color: var(--blanc); border: none; box-shadow: 0 0 30px rgba(124,159,255,0.25);
+}
+.offer-card.featured .offer-btn:hover { box-shadow: 0 0 50px rgba(124,159,255,0.4); transform: translateY(-2px); }
+
+/* POURQUOI */
+.why { background: var(--bg2); }
+.why-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+  margin-top: 4.5rem; background: var(--gris2); max-width: 960px; width: 100%;
+}
+.why-item {
+  background: var(--bg2); padding: 2.5rem 2rem; text-align: center;
+  transition: background 0.3s; position: relative; overflow: hidden;
+}
+.why-item::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transform: scaleX(0); transition: transform 0.3s; transform-origin: left;
+}
+.why-item:hover { background: var(--bg3); }
+.why-item:hover::after { transform: scaleX(1); }
+.why-icon { font-size: 1.8rem; margin-bottom: 1.2rem; display: block; }
+.why-item h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.7rem; }
+.why-item p { font-size: 0.82rem; color: var(--gris); line-height: 1.7; }
+
+/* FAQ */
+.faq { background: var(--bg); }
+.faq-list { margin-top: 4rem; max-width: 700px; width: 100%; }
+.faq-item { border-bottom: 1px solid var(--gris2); text-align: left; }
+.faq-q {
+  width: 100%; background: none; border: none; color: var(--blanc);
+  font-family: 'Outfit', sans-serif; font-size: 0.95rem; font-weight: 400;
+  padding: 1.5rem 0; cursor: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  transition: color 0.2s; text-align: left;
+}
+.faq-q:hover { color: var(--accent); }
+.faq-icon { font-size: 1.2rem; color: var(--accent); transition: transform 0.3s; flex-shrink: 0; }
+.faq-a { font-size: 0.88rem; color: var(--gris); line-height: 1.8; max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s; }
+.faq-item.open .faq-icon { transform: rotate(45deg); }
+.faq-item.open .faq-a { max-height: 300px; padding-bottom: 1.5rem; }
+
+/* CTA FINAL */
+.final-cta {
+  background: var(--bg2); padding: 8rem 4rem; text-align: center;
+  position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center;
+}
+.final-cta::before {
+  content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(124,159,255,0.08) 0%, transparent 70%); pointer-events: none;
+}
+.final-cta h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.5rem, 5vw, 4.5rem); max-width: 700px; position: relative; z-index: 1; }
+.final-cta p { font-size: 1rem; color: var(--gris); margin: 1.5rem auto 2.5rem; max-width: 440px; line-height: 1.8; position: relative; z-index: 1; }
+.btn-final {
+  position: relative; z-index: 1; background: var(--featured); color: var(--blanc); border: none;
+  padding: 1.2rem 3.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 500;
+  text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase;
+  display: inline-block; transition: all 0.3s; box-shadow: 0 0 50px rgba(124,159,255,0.3);
+}
+.btn-final:hover { transform: translateY(-3px); box-shadow: 0 0 80px rgba(124,159,255,0.5); }
+.final-guarantee { margin-top: 1.8rem; font-size: 0.75rem; color: #374151; letter-spacing: 0.08em; position: relative; z-index: 1; }
+
+/* FOOTER */
+footer {
+  background: #030507; padding: 2rem 4rem;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+  border-top: 1px solid var(--gris2);
+}
+.footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.2rem; font-weight: 700;
+}
+.footer-contact { font-size: 0.78rem; color: var(--gris); }
+.footer-contact a { color: var(--accent); text-decoration: none; }
+.footer-text { font-size: 0.72rem; color: #2d3748; }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.8s cubic-bezier(.16,1,.3,1), transform 0.8s cubic-bezier(.16,1,.3,1); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  body { cursor: auto; }
+  .cursor, .cursor-ring { display: none; }
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  .hero { padding: 7rem 1.5rem 4rem; }
+  section { padding: 5rem 1.5rem; }
+  .stats { gap: 2.5rem; padding: 2rem 1.5rem; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .offer-cards { grid-template-columns: 1fr; }
+  .why-grid { grid-template-columns: repeat(2, 1fr); }
+  footer { padding: 1.5rem; flex-direction: column; text-align: center; }
+  .final-cta { padding: 5rem 1.5rem; }
+}
+@media (max-width: 480px) {
+  .why-grid { grid-template-columns: 1fr; }
+  .hero-actions { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- ===== NAVIGATION — modifier les liens href ===== -->
+<nav>
+  <div class="nav-logo">PodcastIA</div>
+  <ul class="nav-links">
+    <li><a href="#how">Comment ça marche</a></li>
+    <li><a href="#offre">Tarifs</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <!-- 🔧 MODIFIER : remplacer #offre par ton lien de paiement -->
+  <a href="#offre" class="nav-cta"><span>Commander →</span></a>
+</nav>
+
+<!-- ===== HERO — modifier le texte principal ===== -->
+<section class="hero">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="hero-badge"><span class="badge-dot"></span>Service de production audio IA · Europe francophone</div>
+  <h1>
+    <span class="line1">Ton article,</span>
+    <span class="line2">en podcast.</span>
+  </h1>
+  <p class="hero-sub">Tu écris. Je transforme. Tes lecteurs t'écoutent dans le métro, en courant, en cuisinant — sans que tu touches à un micro.</p>
+  <div class="hero-actions">
+    <!-- 🔧 MODIFIER : remplacer #offre par ton lien Stripe / PayPal / Gumroad -->
+    <a href="#offre" class="btn-primary">Commencer pour 29€ →</a>
+    <a href="#how" class="btn-secondary">Voir comment ça marche</a>
+  </div>
+  <p class="hero-trust">✓ Livré en 24h &nbsp;·&nbsp; ✓ MP3 prêt à publier &nbsp;·&nbsp; ✓ Satisfait ou remboursé</p>
+  <div class="hero-line"></div>
+</section>
+
+<!-- ===== STATS — modifier les chiffres ===== -->
+<div class="stats">
+  <div class="stat"><span class="stat-num">500M</span><span class="stat-label">Auditeurs dans le monde</span></div>
+  <div class="stat"><span class="stat-num">24h</span><span class="stat-label">Délai de livraison garanti</span></div>
+  <div class="stat"><span class="stat-num">10×</span><span class="stat-label">Moins cher qu'un studio</span></div>
+  <div class="stat"><span class="stat-num">72%</span><span class="stat-label">Des auditeurs vont jusqu'au bout</span></div>
+</div>
+
+<!-- ===== PROBLÈME ===== -->
+<section class="problem">
+  <div class="section-kicker reveal">Le problème</div>
+  <h2 class="reveal">Tu écris pour <em>20% de ton audience.</em><br>Les 80% restants ne lisent pas.</h2>
+  <p class="section-desc reveal">Chaque article publié rate une audience entière — celle qui préfère écouter.</p>
+  <div class="problem-grid reveal">
+    <div class="problem-item">
+      <div class="problem-num">01</div>
+      <p class="problem-text"><strong>Ils n'ont pas le temps de lire.</strong> Mais ils écouteraient dans les transports, en faisant du sport, en conduisant.</p>
+    </div>
+    <div class="problem-item">
+      <div class="problem-num">02</div>
+      <p class="problem-text"><strong>Un podcast coûte 300 à 800€</strong> par épisode en production traditionnelle. Hors de portée pour un créateur indépendant.</p>
+    </div>
+    <div class="problem-item">
+      <div class="problem-num">03</div>
+      <p class="problem-text"><strong>Les outils IA existent</strong> mais demandent du temps, des compétences techniques et des heures de paramétrage.</p>
+    </div>
+    <div class="problem-item">
+      <div class="problem-num">04</div>
+      <p class="problem-text"><strong>Résultat :</strong> ton contenu touche seulement les lecteurs. Une audience entière t'échappe chaque semaine.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COMMENT ÇA MARCHE ===== -->
+<section class="how" id="how">
+  <div class="section-kicker reveal">Comment ça marche</div>
+  <h2 class="reveal">Simple comme <em>envoyer un message.</em></h2>
+  <p class="section-desc reveal">Trois étapes. Zéro compétence technique. Un podcast livré dans ta boîte mail.</p>
+  <div class="steps">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <h3>Tu m'envoies ton article</h3>
+        <p>Par email, lien Substack ou copier-coller. N'importe quel format — si tu peux le lire, je peux le transformer.</p>
+        <span class="step-badge">⚡ 30 secondes de ton temps</span>
+      </div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <h3>Je génère le script et la voix</h3>
+        <p>L'IA rédige un script optimisé pour l'oral — naturel et engageant. Puis le transforme en audio avec une voix professionnelle française.</p>
+        <span class="step-badge">🎙️ Qualité studio, ton humain</span>
+      </div>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <h3>Tu reçois ton podcast en 24h</h3>
+        <p>Un fichier MP3 + le titre + la description, prêts à publier sur Spotify, Apple Podcasts ou ta newsletter.</p>
+        <span class="step-badge">📦 Tout inclus, rien à faire</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== OFFRE / TARIFS — modifier prix, features et liens de paiement ===== -->
+<section class="offer" id="offre">
+  <div class="section-kicker reveal">Tarifs</div>
+  <h2 class="reveal">Une offre <em>pour chaque créateur.</em></h2>
+  <p class="section-desc reveal">Commande à l'épisode sans engagement, ou passe au mensuel pour plus de régularité.</p>
+  <div class="offer-cards reveal">
+
+    <div class="offer-card">
+      <span class="offer-tag">Pour commencer</span>
+      <div class="offer-name">Découverte</div>
+      <div class="offer-price"><sup>€</sup>29</div><!-- 🔧 MODIFIER : prix -->
+      <p class="offer-period">par épisode · sans engagement</p>
+      <p class="offer-desc">Un épisode pour tester la qualité sur ton propre contenu.</p>
+      <ul class="offer-features">
+        <!-- 🔧 MODIFIER : ajouter/supprimer des <li> -->
+        <li>1 épisode podcast (5–8 min)</li>
+        <li>Script optimisé pour l'oral</li>
+        <li>Fichier MP3 haute qualité</li>
+        <li>Titre + description inclus</li>
+        <li>Livraison en 24h</li>
+      </ul>
+      <!-- 🔧 MODIFIER : remplacer le mailto par ton lien Stripe/PayPal/Gumroad -->
+      <a href="mailto:VOTRE_EMAIL@gmail.com?subject=Commande%20Découverte%2029€&body=Bonjour%2C%20je%20commande%20le%20Pack%20Découverte.%20Voici%20mon%20article%20:" class="offer-btn">Commander →</a>
+    </div>
+
+    <div class="offer-card featured">
+      <div class="featured-badge">⭐ Le plus populaire</div>
+      <span class="offer-tag" style="margin-top:1rem;">Créateur régulier</span>
+      <div class="offer-name">Mensuel</div>
+      <div class="offer-price"><sup>€</sup>79</div><!-- 🔧 MODIFIER : prix -->
+      <p class="offer-period">par mois · 10 épisodes inclus</p>
+      <p class="offer-desc">Pour les créateurs qui publient régulièrement. Livraison prioritaire et support direct.</p>
+      <ul class="offer-features">
+        <li>10 épisodes / mois</li>
+        <li>Livraison prioritaire en 12h</li>
+        <li>3 styles de voix au choix</li>
+        <li>Révision incluse si besoin</li>
+        <li>Support WhatsApp direct</li>
+      </ul>
+      <!-- 🔧 MODIFIER : lien paiement mensuel -->
+      <a href="mailto:VOTRE_EMAIL@gmail.com?subject=Abonnement%20Mensuel%2079€&body=Bonjour%2C%20je%20souhaite%20m'abonner%20au%20Pack%20Mensuel." class="offer-btn">S'abonner →</a>
+    </div>
+
+    <div class="offer-card">
+      <span class="offer-tag">Agences & revendeurs</span>
+      <div class="offer-name">Marque Blanche</div>
+      <div class="offer-price"><sup>€</sup>199</div><!-- 🔧 MODIFIER : prix -->
+      <p class="offer-period">par mois · épisodes illimités</p>
+      <p class="offer-desc">Tu revends le service à tes clients. Je produis, tu gardes la relation.</p>
+      <ul class="offer-features">
+        <li>Épisodes illimités</li>
+        <li>Aucune mention de ma marque</li>
+        <li>Plusieurs clients gérés</li>
+        <li>Facturation à ton nom</li>
+        <li>Account manager dédié</li>
+      </ul>
+      <!-- 🔧 MODIFIER : lien paiement marque blanche -->
+      <a href="mailto:VOTRE_EMAIL@gmail.com?subject=Pack%20Marque%20Blanche%20199€" class="offer-btn">Nous contacter →</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== POURQUOI MOI — modifier icônes et textes ===== -->
+<section class="why">
+  <div class="section-kicker reveal">Pourquoi ce service</div>
+  <h2 class="reveal">Pas un outil. <em>Un service complet.</em></h2>
+  <div class="why-grid reveal">
+    <div class="why-item">
+      <span class="why-icon">🇫🇷</span>
+      <h3>100% francophone</h3>
+      <p>Scripts et voix calibrés pour le marché européen francophone. Pas une traduction de l'anglais.</p>
+    </div>
+    <div class="why-item">
+      <span class="why-icon">⚡</span>
+      <h3>24h garanties</h3>
+      <p>Tu envoies ce soir, tu reçois demain matin. Aucun outil ne garantit une livraison humaine.</p>
+    </div>
+    <div class="why-item">
+      <span class="why-icon">🎯</span>
+      <h3>Zéro compétence requise</h3>
+      <p>Pas besoin de savoir ce qu'est un DAW ou un flux RSS. Tu envoies, je m'occupe du reste.</p>
+    </div>
+    <div class="why-item">
+      <span class="why-icon">💎</span>
+      <h3>10× moins cher</h3>
+      <p>Studio traditionnel : 300–800€/épisode. Ici : 29€. Le calcul est immédiat.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ — ajouter des questions en copiant un bloc .faq-item ===== -->
+<section class="faq" id="faq">
+  <div class="section-kicker reveal">Questions fréquentes</div>
+  <h2 class="reveal">Tout ce que tu veux <em>savoir.</em></h2>
+  <div class="faq-list reveal">
+
+    <div class="faq-item">
+      <button class="faq-q">Quelle est la qualité de la voix générée ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">La voix est générée par une IA de dernière génération, naturelle et expressive avec des pauses et intonations conversationnelles — difficile à distinguer d'une voix humaine.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Puis-je publier le podcast commercialement ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">Oui, totalement. Le MP3 livré t'appartient et tu peux le publier sur Spotify, Apple Podcasts, Deezer ou partout ailleurs. Aucune restriction d'usage commercial.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Combien de temps dure un épisode ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">Entre 5 et 8 minutes selon la longueur de ton article. Le format idéal pour les newsletters — assez long pour développer les idées, assez court pour garder l'attention.</div>
+    </div>
+    <div class="faq-item">
+      <!-- 🔧 MODIFIER : préciser tes moyens de paiement dans la réponse -->
+      <button class="faq-q">Comment je paie et envoie mon article ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">Tu cliques sur le bouton de commande, tu effectues le paiement (carte, PayPal…), tu m'envoies ton article par email, et tu reçois ton podcast en 24h. Simple comme ça.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q">Et si je ne suis pas satisfait ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">Satisfait ou remboursé, sans question. Si la qualité ne te convient pas sur ton premier épisode, je te rembourse intégralement. Mon objectif : te faire découvrir ce que ça peut apporter.</div>
+    </div>
+    <!-- 🔧 AJOUTER UNE QUESTION : copier ce bloc
+    <div class="faq-item">
+      <button class="faq-q">Ta question ?<span class="faq-icon">+</span></button>
+      <div class="faq-a">Ta réponse.</div>
+    </div>
+    -->
+
+  </div>
+</section>
+
+<!-- ===== CTA FINAL — modifier texte et lien de paiement ===== -->
+<section class="final-cta">
+  <h2 class="reveal">Prêt à toucher une audience<br>qui <em>n'a pas le temps de lire ?</em></h2>
+  <p class="reveal">Commande ton premier épisode maintenant. Si tu n'es pas satisfait, je te rembourse. Sans discussion.</p>
+  <!-- 🔧 MODIFIER : remplacer le mailto par ton vrai lien de paiement Stripe/PayPal/Gumroad -->
+  <a href="mailto:VOTRE_EMAIL@gmail.com?subject=Commande%20premier%20épisode&body=Bonjour%2C%20je%20commande%20mon%20premier%20podcast.%20Voici%20mon%20article%20:" class="btn-final reveal">Commander mon premier épisode — 29€ →</a>
+  <p class="final-guarantee reveal">✓ Satisfait ou remboursé &nbsp;·&nbsp; ✓ Livraison en 24h &nbsp;·&nbsp; ✓ Sans abonnement obligatoire</p>
+</section>
+
+<!-- ===== FOOTER — modifier email et nom ===== -->
+<footer>
+  <div class="footer-logo">PodcastIA</div>
+  <!-- 🔧 MODIFIER : ton email -->
+  <div class="footer-contact">Contact : <a href="mailto:VOTRE_EMAIL@gmail.com">VOTRE_EMAIL@gmail.com</a></div>
+  <div class="footer-text">© 2026 PodcastIA · Europe francophone</div>
+</footer>
+
+<script>
+  // Curseur
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e=>{mx=e.clientX;my=e.clientY;});
+  function animCursor(){
+    cursor.style.left=mx+'px';cursor.style.top=my+'px';
+    rx+=(mx-rx)*0.12;ry+=(my-ry)*0.12;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    requestAnimationFrame(animCursor);
+  }
+  animCursor();
+  document.querySelectorAll('a,button').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.transform='translate(-50%,-50%) scale(1.8)';ring.style.borderColor='rgba(124,159,255,0.7)';});
+    el.addEventListener('mouseleave',()=>{ring.style.transform='translate(-50%,-50%) scale(1)';ring.style.borderColor='rgba(124,159,255,0.4)';});
+  });
+
+  // Scroll reveal
+  const obs=new IntersectionObserver((entries)=>{
+    entries.forEach((entry,i)=>{
+      if(entry.isIntersecting){setTimeout(()=>entry.target.classList.add('visible'),i*100);obs.unobserve(entry.target);}
+    });
+  },{threshold:0.08});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+  // FAQ
+  document.querySelectorAll('.faq-q').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const item=btn.parentElement;
+      const isOpen=item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(i=>i.classList.remove('open'));
+      if(!isOpen)item.classList.add('open');
+    });
+  });
+
+  // Compteur stats
+  function animCount(el,target,suffix=''){
+    let start=0;
+    const step=(ts)=>{
+      if(!start)start=ts;
+      const p=Math.min((ts-start)/1500,1);
+      const e=1-Math.pow(1-p,3);
+      el.textContent=Math.floor(e*target)+suffix;
+      if(p<1)requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const statObs=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const nums=entry.target.querySelectorAll('.stat-num');
+        nums.forEach(n=>{
+          if(n.textContent.includes('500'))animCount(n,500,'M');
+          else if(n.textContent.includes('24'))animCount(n,24,'h');
+          else if(n.textContent.includes('10'))animCount(n,10,'×');
+          else if(n.textContent.includes('72'))animCount(n,72,'%');
+        });
+        statObs.unobserve(entry.target);
+      }
+    });
+  },{threshold:0.5});
+  const statsEl=document.querySelector('.stats');
+  if(statsEl)statObs.observe(statsEl);
+</script>
+</body>
+</html>
